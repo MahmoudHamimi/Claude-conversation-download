@@ -16,11 +16,13 @@ const USER_SELECTORS = [
   'div[class*="font-user-message"]'
 ];
 
-const ASSISTANT_SELECTORS = [
-  '[data-testid="chat-message"]',
-  '.font-claude-message',
-  'div[class*="font-claude-message"]'
-];
+// Class names for the assistant bubble (e.g. "font-claude-message") change
+// often as Anthropic ships UI updates, and relying on them caused Claude's
+// replies to silently disappear from exports. Instead we only trust the
+// stable [data-testid="user-message"] anchor and derive assistant turns
+// structurally: whatever sits between one user message and the next
+// (walking up to a shared ancestor "turn" container) is treated as that
+// turn's assistant reply. This survives class-name churn.
 
 function uniqueTopLevelNodes(selectors) {
   const set = new Set();
@@ -32,17 +34,70 @@ function uniqueTopLevelNodes(selectors) {
   return nodes.filter((n) => !nodes.some((other) => other !== n && other.contains(n)));
 }
 
+// Find a reasonable "turn" root for a message bubble: walk up from the
+// bubble until we hit an ancestor that has more than one child (i.e. a
+// container that plausibly holds sibling turns), capped at a few levels so
+// we don't walk all the way up to <body>.
+function findTurnRoot(bubble) {
+  let node = bubble;
+  for (let i = 0; i < 6; i++) {
+    const parent = node.parentElement;
+    if (!parent) break;
+    if (parent.children.length > 1) return node;
+    node = parent;
+  }
+  return node;
+}
+
 function collectMessageNodes() {
-  const users = uniqueTopLevelNodes(USER_SELECTORS).map((el) => ({ el, role: 'user' }));
-  const assistants = uniqueTopLevelNodes(ASSISTANT_SELECTORS).map((el) => ({ el, role: 'assistant' }));
-  const all = [...users, ...assistants];
-  all.sort((a, b) => {
-    const pos = a.el.compareDocumentPosition(b.el);
+  const userBubbles = uniqueTopLevelNodes(USER_SELECTORS);
+  if (!userBubbles.length) return [];
+
+  userBubbles.sort((a, b) => {
+    const pos = a.compareDocumentPosition(b);
     if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
     if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
     return 0;
   });
-  return all;
+
+  const userRoots = userBubbles.map(findTurnRoot);
+  // All turn roots should share the same parent (the scroll container).
+  // If they don't, fall back to each bubble's own immediate container.
+  const container = userRoots[0].parentElement;
+  const sameParent = userRoots.every((r) => r.parentElement === container);
+
+  const result = [];
+
+  if (sameParent && container) {
+    const siblings = Array.from(container.children);
+    userRoots.forEach((root, i) => {
+      result.push({ el: userBubbles[i], role: 'user' });
+      const startIdx = siblings.indexOf(root);
+      const nextRoot = userRoots[i + 1];
+      const endIdx = nextRoot ? siblings.indexOf(nextRoot) : siblings.length;
+      const between = siblings.slice(startIdx + 1, endIdx === -1 ? siblings.length : endIdx);
+      between.forEach((el) => {
+        const t = el.innerText && el.innerText.trim();
+        if (t) result.push({ el, role: 'assistant' });
+      });
+    });
+  } else {
+    // Fallback: walk the whole body in document order, splitting on user
+    // bubbles, and treat significant text-bearing siblings after each user
+    // bubble (up to the next user bubble) as assistant content.
+    userBubbles.forEach((bubble, i) => {
+      result.push({ el: bubble, role: 'user' });
+      let node = bubble.nextElementSibling;
+      const stopAt = userBubbles[i + 1];
+      while (node && node !== stopAt && !node.contains(stopAt)) {
+        const t = node.innerText && node.innerText.trim();
+        if (t) result.push({ el: node, role: 'assistant' });
+        node = node.nextElementSibling;
+      }
+    });
+  }
+
+  return result;
 }
 
 function isArtifactCard(el) {
@@ -124,6 +179,11 @@ function walk(node, blocks, depth) {
   }
 }
 
+const UI_CHROME_TEXT = new Set([
+  'copy', 'retry', 'edit', 'share', 'delete', 'regenerate',
+  'copy code', 'good response', 'bad response'
+]);
+
 function elementToBlocks(el) {
   const blocks = [];
   walk(el, blocks, 0);
@@ -131,7 +191,10 @@ function elementToBlocks(el) {
     const t = el.innerText && el.innerText.trim();
     if (t) blocks.push({ type: 'paragraph', text: t });
   }
-  return blocks;
+  return blocks.filter((b) => {
+    if (b.type !== 'paragraph') return true;
+    return !UI_CHROME_TEXT.has(b.text.trim().toLowerCase());
+  });
 }
 
 function getConversationTitle() {
@@ -145,10 +208,32 @@ function getConversationTitle() {
 
 function extractConversation() {
   const nodes = collectMessageNodes();
-  const messages = nodes.map(({ el, role }) => ({
-    role,
-    blocks: elementToBlocks(el)
-  }));
+
+  // collectMessageNodes may emit several sibling DOM nodes for a single
+  // assistant turn (since we no longer rely on one class-named bubble).
+  // Merge consecutive 'assistant' entries into one logical message so they
+  // render as a single Claude reply rather than several fragments.
+  const messages = [];
+  nodes.forEach(({ el, role }) => {
+    const blocks = elementToBlocks(el);
+    if (!blocks.length) return;
+    const last = messages[messages.length - 1];
+    if (role === 'assistant' && last && last.role === 'assistant') {
+      last.blocks.push(...blocks);
+    } else {
+      messages.push({ role, blocks: [...blocks] });
+    }
+  });
+
+  const hasAssistant = messages.some((m) => m.role === 'assistant');
+  const hasUser = messages.some((m) => m.role === 'user');
+  if (hasUser && !hasAssistant) {
+    console.warn(
+      '[Transcript export] No assistant messages were found. Claude.ai may have ' +
+      'changed its DOM structure — check ASSISTANT_SELECTORS in content.js.'
+    );
+  }
+
   return {
     title: getConversationTitle(),
     url: location.href,
