@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Transcript — Export for Claude",
-  "version": "1.1.0",
-  "description": "Export your Claude.ai conversations as Markdown, HTML, JSON, or PDF — with a handy sidebar.",
+  "name": "Transcript \u2014 Export for Claude",
+  "version": "1.3.0",
+  "description": "Export your Claude.ai conversations as Markdown, HTML, JSON, or PDF \u2014 with a sleek sidebar and dark mode.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -15,17 +15,27 @@
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://claude.ai/*"],
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

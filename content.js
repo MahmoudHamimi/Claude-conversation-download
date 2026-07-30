@@ -1,13 +1,8 @@
 /**
- * Transcript — Export for Claude (Sidebar Edition)
+ * Transcript — Export for Claude (Sidebar Edition v1.3)
  * Content script: runs on claude.ai, reads the DOM of the currently open
  * conversation, and turns it into a structured object that can be rendered
  * as Markdown / HTML / JSON / PDF and downloaded.
- *
- * NOTE ON SELECTORS: claude.ai is a frequently-updated single-page app and
- * doesn't expose a public DOM API. The selectors below are layered with
- * fallbacks on purpose — if Anthropic changes class names, update the
- * arrays in USER_SELECTORS / ASSISTANT_SELECTORS first.
  */
 
 const USER_SELECTORS = [
@@ -16,11 +11,6 @@ const USER_SELECTORS = [
   'div[class*="font-user-message"]'
 ];
 
-// Confirmed via live DOM inspection (2026-07-30): Claude's reply bubble
-// uses the class "font-claude-response" (NOT "font-claude-message", which
-// doesn't exist in the current UI — that was the bug). Each reply is also
-// preceded by a visually-hidden <h2 class="sr-only" data-find-omitted> with
-// text like "Claude responded: ..." which we skip via SR_ONLY_SELECTOR.
 const ASSISTANT_SELECTORS = [
   '.font-claude-response',
   'div[class*="font-claude-response"]'
@@ -34,14 +24,9 @@ function uniqueTopLevelNodes(selectors) {
     document.querySelectorAll(sel).forEach((el) => set.add(el));
   });
   const nodes = Array.from(set);
-  // Drop any node whose ancestor is also in the set (avoid double-counting).
   return nodes.filter((n) => !nodes.some((other) => other !== n && other.contains(n)));
 }
 
-// Find a reasonable "turn" root for a message bubble: walk up from the
-// bubble until we hit an ancestor that has more than one child (i.e. a
-// container that plausibly holds sibling turns), capped at a few levels so
-// we don't walk all the way up to <body>.
 function findTurnRoot(bubble) {
   let node = bubble;
   for (let i = 0; i < 6; i++) {
@@ -53,10 +38,6 @@ function findTurnRoot(bubble) {
   return node;
 }
 
-// Fallback used only if ASSISTANT_SELECTORS matches nothing (e.g. Anthropic
-// renames the class again). Derives assistant turns structurally: whatever
-// sits between one user message and the next is treated as that turn's
-// assistant reply.
 function collectAssistantNodesStructurally(userBubbles) {
   const userRoots = userBubbles.map(findTurnRoot);
   const container = userRoots[0] && userRoots[0].parentElement;
@@ -166,11 +147,11 @@ function tableFromEl(el) {
 }
 
 function walk(node, blocks, depth) {
-  if (depth > 12) return; // safety valve against pathological nesting
+  if (depth > 12) return;
   for (const child of Array.from(node.children)) {
     const tag = child.tagName;
     if (child.matches && child.matches(SR_ONLY_SELECTOR)) {
-      continue; // visually-hidden a11y labels like "Claude responded: ..."
+      continue;
     }
     if (tag === 'PRE') {
       blocks.push(codeBlockFromPre(child));
@@ -229,11 +210,6 @@ function getConversationTitle() {
 
 function extractConversation() {
   const nodes = collectMessageNodes();
-
-  // collectMessageNodes may emit several sibling DOM nodes for a single
-  // assistant turn (since we no longer rely on one class-named bubble).
-  // Merge consecutive 'assistant' entries into one logical message so they
-  // render as a single Claude reply rather than several fragments.
   const messages = [];
   nodes.forEach(({ el, role }) => {
     const blocks = elementToBlocks(el);
@@ -312,7 +288,7 @@ function blockToMarkdown(block) {
         .map((l) => `> ${l}`)
         .join('\n');
     case 'artifact':
-      return `> 📎 **Artifact:** ${block.title} *(open the conversation in Claude.ai to view it in full)*`;
+      return `> \ud83d\udcce **Artifact:** ${block.title} *(open the conversation in Claude.ai to view it in full)*`;
     case 'table': {
       if (!block.rows.length) return '';
       const [header, ...rest] = block.rows;
@@ -330,13 +306,13 @@ function toMarkdown(conv) {
   const lines = [
     `# ${conv.title}`,
     '',
-    `*Exported from [Claude.ai](${conv.url}) on ${formatDate(conv.exportedAt)} — ${conv.messages.length} messages*`,
+    `*Exported from [Claude.ai](${conv.url}) on ${formatDate(conv.exportedAt)} \u2014 ${conv.messages.length} messages*`,
     '',
     '---',
     ''
   ];
   conv.messages.forEach((msg) => {
-    lines.push(msg.role === 'user' ? '### 🧑 You' : '### ✦ Claude');
+    lines.push(msg.role === 'user' ? '### \ud83e\uddd1 You' : '### \u2726 Claude');
     lines.push('');
     msg.blocks.forEach((b) => {
       const md = blockToMarkdown(b);
@@ -367,7 +343,7 @@ function blockToHtml(block) {
     case 'quote':
       return `<blockquote>${escapeHtml(block.text).replace(/\n/g, '<br>')}</blockquote>`;
     case 'artifact':
-      return `<div class="artifact-card"><span class="artifact-label">FIG — Artifact</span><span class="artifact-title">${escapeHtml(block.title)}</span></div>`;
+      return `<div class="artifact-card"><span class="artifact-label">FIG \u2014 Artifact</span><span class="artifact-title">${escapeHtml(block.title)}</span></div>`;
     case 'table': {
       if (!block.rows.length) return '';
       const [header, ...rest] = block.rows;
@@ -402,22 +378,42 @@ function toHTML(conv) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>${escapeHtml(conv.title)} — Transcript</title>
+<title>${escapeHtml(conv.title)} \u2014 Transcript</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #efebde;
-    --paper-inset: #e6e1d0;
-    --ink: #2b2820;
-    --ink-soft: #5c5748;
-    --rule: #c9c2ae;
-    --user: #35586b;
-    --user-tint: #e2eaee;
-    --claude: #4c6b4f;
-    --claude-tint: #e6ede4;
-    --accent: #b3811f;
+    --paper: #faf8f5;
+    --paper-inset: #f3f0eb;
+    --ink: #1a1a1a;
+    --ink-soft: #6b6560;
+    --rule: #e2ddd6;
+    --user: #2d5a6b;
+    --user-tint: #e8f0f3;
+    --claude: #3d6b42;
+    --claude-tint: #eaf0e8;
+    --accent: #d97757;
+    --accent-hover: #c86848;
+    --code-bg: #1e1c18;
+    --code-text: #f2ecd8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1a1a1a;
+      --paper-inset: #242422;
+      --ink: #f0ece4;
+      --ink-soft: #a8a29e;
+      --rule: #33302c;
+      --user: #5a9db0;
+      --user-tint: #1a2f35;
+      --claude: #6bb36f;
+      --claude-tint: #1a2f1c;
+      --accent: #e88b6a;
+      --accent-hover: #f09878;
+      --code-bg: #121110;
+      --code-text: #e8e2d4;
+    }
   }
   * { box-sizing: border-box; }
   body {
@@ -507,7 +503,7 @@ function toHTML(conv) {
   }
   .code-block {
     margin: 0 0 14px;
-    background: #23211b;
+    background: var(--code-bg);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -528,7 +524,7 @@ function toHTML(conv) {
   .code-block code {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
-    color: #f2ecd8;
+    color: var(--code-text);
     white-space: pre;
   }
   .artifact-card {
@@ -589,12 +585,12 @@ function toHTML(conv) {
     <div class="title-block">
       <div class="eyebrow">Transcript</div>
       <h1 class="doc-title">${escapeHtml(conv.title)}</h1>
-      <div class="meta">${conv.messages.length} messages · exported ${escapeHtml(formatDate(conv.exportedAt))}</div>
+      <div class="meta">${conv.messages.length} messages \u00b7 exported ${escapeHtml(formatDate(conv.exportedAt))}</div>
       <div class="meta"><a href="${escapeHtml(conv.url)}">${escapeHtml(conv.url)}</a></div>
     </div>
     <div class="rule-double"></div>
     ${turns}
-    <footer>Exported with Transcript — Export for Claude</footer>
+    <footer>Exported with Transcript \u2014 Export for Claude</footer>
   </div>
 </body>
 </html>`;
@@ -630,6 +626,21 @@ function downloadFile(filename, content, mime) {
 const SB_ID = 'transcript-export-sidebar';
 const SB_TOGGLE_ID = 'transcript-export-toggle';
 const SB_STYLE_ID = 'transcript-export-styles';
+const THEME_KEY = 'transcript-theme';
+
+function getStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) || 'light';
+  } catch (e) {
+    return 'light';
+  }
+}
+
+function setStoredTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (e) {}
+}
 
 function injectSidebarStyles() {
   if (document.getElementById(SB_STYLE_ID)) return;
@@ -641,17 +652,17 @@ function injectSidebarStyles() {
     #${SB_ID} {
       position: fixed;
       top: 0;
-      right: -400px;
-      width: 400px;
+      right: -420px;
+      width: 420px;
       height: 100vh;
-      background: #efebde;
-      border-left: 1px solid #c9c2ae;
+      background: var(--ts-paper);
+      border-left: 1px solid var(--ts-rule);
       z-index: 2147483647;
       transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
       font-family: 'Inter', sans-serif;
-      color: #2b2820;
+      color: var(--ts-ink);
       box-shadow: -8px 0 32px rgba(0,0,0,0.12);
     }
     #${SB_ID}.open {
@@ -661,39 +672,84 @@ function injectSidebarStyles() {
       box-sizing: border-box;
     }
 
+    /* Light mode (default) */
+    #${SB_ID} {
+      --ts-paper: #faf8f5;
+      --ts-paper-inset: #f3f0eb;
+      --ts-ink: #1a1a1a;
+      --ts-ink-soft: #6b6560;
+      --ts-rule: #e2ddd6;
+      --ts-user: #2d5a6b;
+      --ts-user-tint: #e8f0f3;
+      --ts-claude: #3d6b42;
+      --ts-claude-tint: #eaf0e8;
+      --ts-accent: #d97757;
+      --ts-accent-hover: #c86848;
+      --ts-error: #a13d3d;
+    }
+
+    /* Dark mode */
+    #${SB_ID}[data-theme="dark"] {
+      --ts-paper: #1a1a1a;
+      --ts-paper-inset: #242422;
+      --ts-ink: #f0ece4;
+      --ts-ink-soft: #a8a29e;
+      --ts-rule: #33302c;
+      --ts-user: #5a9db0;
+      --ts-user-tint: #1a2f35;
+      --ts-claude: #6bb36f;
+      --ts-claude-tint: #1a2f1c;
+      --ts-accent: #e88b6a;
+      --ts-accent-hover: #f09878;
+      --ts-error: #e07070;
+    }
+
     .ts-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 18px 20px 14px;
-      border-bottom: 1px solid #c9c2ae;
-      background: #e6e1d0;
+      border-bottom: 1px solid var(--ts-rule);
+      background: var(--ts-paper-inset);
       flex-shrink: 0;
+    }
+    .ts-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     .ts-header-title {
       font-family: 'Fraunces', serif;
       font-weight: 700;
       font-size: 22px;
       letter-spacing: -0.01em;
+      color: var(--ts-ink);
     }
-    .ts-header-close {
+    .ts-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ts-header-btn {
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      border: 1px solid #c9c2ae;
-      background: #efebde;
-      color: #5c5748;
-      font-size: 20px;
+      border: 1px solid var(--ts-rule);
+      background: var(--ts-paper);
+      color: var(--ts-ink-soft);
+      font-size: 16px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
       padding: 0;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
-    .ts-header-close:hover {
-      background: #c9c2ae;
-      color: #2b2820;
+    .ts-header-btn:hover {
+      background: var(--ts-rule);
+      color: var(--ts-ink);
+      border-color: var(--ts-accent);
     }
 
     .ts-scroll {
@@ -705,7 +761,7 @@ function injectSidebarStyles() {
       width: 6px;
     }
     .ts-scroll::-webkit-scrollbar-thumb {
-      background: #c9c2ae;
+      background: var(--ts-rule);
       border-radius: 3px;
     }
 
@@ -717,7 +773,7 @@ function injectSidebarStyles() {
       font-size: 10px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: #b3811f;
+      color: var(--ts-accent);
       margin-bottom: 10px;
       display: flex;
       align-items: center;
@@ -730,12 +786,13 @@ function injectSidebarStyles() {
       gap: 10px;
     }
     .ts-pair {
-      background: #e6e1d0;
-      border: 1px solid #c9c2ae;
+      background: var(--ts-paper-inset);
+      border: 1px solid var(--ts-rule);
       border-radius: 10px;
       padding: 12px 14px;
       font-size: 12.5px;
       line-height: 1.5;
+      color: var(--ts-ink);
     }
     .ts-pair-q, .ts-pair-a {
       display: flex;
@@ -744,7 +801,7 @@ function injectSidebarStyles() {
     .ts-pair-q {
       margin-bottom: 8px;
       padding-bottom: 8px;
-      border-bottom: 1px dashed #c9c2ae;
+      border-bottom: 1px dashed var(--ts-rule);
     }
     .ts-pair-label {
       font-family: 'JetBrains Mono', monospace;
@@ -755,17 +812,17 @@ function injectSidebarStyles() {
       flex-shrink: 0;
       margin-top: 2px;
     }
-    .ts-pair-q .ts-pair-label { color: #35586b; }
-    .ts-pair-a .ts-pair-label { color: #4c6b4f; }
+    .ts-pair-q .ts-pair-label { color: var(--ts-user); }
+    .ts-pair-a .ts-pair-label { color: var(--ts-claude); }
     .ts-pair-text {
-      color: #2b2820;
+      color: var(--ts-ink);
       display: -webkit-box;
       -webkit-line-clamp: 4;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
     .ts-pair-empty {
-      color: #6b6656;
+      color: var(--ts-ink-soft);
       font-style: italic;
       text-align: center;
       padding: 20px;
@@ -783,17 +840,18 @@ function injectSidebarStyles() {
       gap: 10px;
       width: 100%;
       padding: 10px 12px;
-      background: #e6e1d0;
-      border: 1px solid #c9c2ae;
+      background: var(--ts-paper-inset);
+      border: 1px solid var(--ts-rule);
       border-radius: 8px;
       cursor: pointer;
       text-align: left;
       font-family: inherit;
+      color: var(--ts-ink);
       transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
     }
     .ts-format-btn:hover {
-      border-color: #b3811f;
-      background: #e2ddd0;
+      border-color: var(--ts-accent);
+      background: var(--ts-paper);
       transform: translateX(2px);
     }
     .ts-format-btn:active {
@@ -804,10 +862,10 @@ function injectSidebarStyles() {
       border-radius: 2px;
       align-self: stretch;
     }
-    .ts-format-rail.html { background: #4c6b4f; }
-    .ts-format-rail.md { background: #35586b; }
-    .ts-format-rail.json { background: #b3811f; }
-    .ts-format-rail.pdf { background: #a13d3d; }
+    .ts-format-rail.html { background: var(--ts-claude); }
+    .ts-format-rail.md { background: var(--ts-user); }
+    .ts-format-rail.json { background: var(--ts-accent); }
+    .ts-format-rail.pdf { background: var(--ts-error); }
     .ts-format-name {
       font-family: 'Fraunces', serif;
       font-weight: 600;
@@ -815,7 +873,7 @@ function injectSidebarStyles() {
     }
     .ts-format-desc {
       font-size: 11px;
-      color: #6b6656;
+      color: var(--ts-ink-soft);
     }
 
     .ts-status {
@@ -824,14 +882,15 @@ function injectSidebarStyles() {
       font-size: 11px;
       line-height: 1.5;
       margin-top: 4px;
+      color: var(--ts-ink-soft);
     }
-    .ts-status.pending { color: #6b6656; }
-    .ts-status.success { color: #4c6b4f; }
-    .ts-status.error { color: #a13d3d; }
+    .ts-status.pending { color: var(--ts-ink-soft); }
+    .ts-status.success { color: var(--ts-claude); }
+    .ts-status.error { color: var(--ts-error); }
 
     .ts-footer {
       font-size: 10px;
-      color: #6b6656;
+      color: var(--ts-ink-soft);
       text-align: center;
       padding: 10px 0 4px;
     }
@@ -839,7 +898,7 @@ function injectSidebarStyles() {
     .ts-refresh-btn {
       background: none;
       border: none;
-      color: #b3811f;
+      color: var(--ts-accent);
       cursor: pointer;
       font-size: 14px;
       padding: 2px 6px;
@@ -847,7 +906,7 @@ function injectSidebarStyles() {
       line-height: 1;
     }
     .ts-refresh-btn:hover {
-      background: #c9c2ae;
+      background: var(--ts-rule);
     }
 
     #${SB_TOGGLE_ID} {
@@ -857,7 +916,7 @@ function injectSidebarStyles() {
       width: 52px;
       height: 52px;
       border-radius: 50%;
-      background: #b3811f;
+      background: var(--ts-accent);
       color: #fff;
       border: none;
       cursor: pointer;
@@ -873,7 +932,7 @@ function injectSidebarStyles() {
     }
     #${SB_TOGGLE_ID}:hover {
       transform: scale(1.08);
-      background: #9a6e18;
+      background: var(--ts-accent-hover);
     }
     #${SB_TOGGLE_ID}:active {
       transform: scale(0.96);
@@ -888,18 +947,28 @@ function injectSidebarStyles() {
 function createSidebar() {
   if (document.getElementById(SB_ID)) return;
 
+  const theme = getStoredTheme();
+
   const sidebar = document.createElement('div');
   sidebar.id = SB_ID;
+  sidebar.setAttribute('data-theme', theme);
   sidebar.innerHTML = `
     <div class="ts-header">
-      <div class="ts-header-title">Transcript</div>
-      <button class="ts-header-close" title="Close sidebar">&times;</button>
+      <div class="ts-header-left">
+        <div class="ts-header-title">Transcript</div>
+      </div>
+      <div class="ts-header-actions">
+        <button class="ts-header-btn" id="ts-theme-toggle" title="Toggle light / dark mode">
+          ${theme === 'dark' ? '\u2600' : '\u263e'}
+        </button>
+        <button class="ts-header-btn" id="ts-close" title="Close sidebar">&times;</button>
+      </div>
     </div>
     <div class="ts-scroll">
       <div class="ts-section">
         <div class="ts-section-title">
           <span>Conversation Summary</span>
-          <button class="ts-refresh-btn" id="ts-refresh" title="Refresh summary">&#8635;</button>
+          <button class="ts-refresh-btn" id="ts-refresh" title="Refresh summary">\u21bb</button>
         </div>
         <div id="ts-summary" class="ts-summary-list">
           <div class="ts-pair-empty">Open a conversation to see a summary.</div>
@@ -939,14 +1008,19 @@ function createSidebar() {
         </div>
       </div>
       <div id="ts-status" class="ts-status"></div>
-      <div class="ts-footer">Runs entirely in your browser — nothing leaves the page.</div>
+      <div class="ts-footer">Runs entirely in your browser \u2014 nothing leaves the page.</div>
     </div>
   `;
   document.body.appendChild(sidebar);
 
-  sidebar.querySelector('.ts-header-close').addEventListener('click', (e) => {
+  sidebar.querySelector('#ts-close').addEventListener('click', (e) => {
     e.stopPropagation();
     toggleSidebar();
+  });
+
+  sidebar.querySelector('#ts-theme-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleTheme();
   });
 
   sidebar.querySelectorAll('.ts-format-btn').forEach((btn) => {
@@ -966,7 +1040,7 @@ function createToggle() {
   if (document.getElementById(SB_TOGGLE_ID)) return;
   const btn = document.createElement('button');
   btn.id = SB_TOGGLE_ID;
-  btn.innerHTML = '&#128196;';
+  btn.innerHTML = '\ud83d\udcc4';
   btn.title = 'Toggle Transcript sidebar';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -991,6 +1065,21 @@ function toggleSidebar() {
   }
 }
 
+function toggleTheme() {
+  const sb = document.getElementById(SB_ID);
+  if (!sb) return;
+  const current = sb.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  sb.setAttribute('data-theme', next);
+  setStoredTheme(next);
+
+  const btn = sb.querySelector('#ts-theme-toggle');
+  if (btn) {
+    btn.innerHTML = next === 'dark' ? '\u2600' : '\u263e';
+    btn.title = next === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  }
+}
+
 function setStatus(text, kind) {
   const el = document.getElementById('ts-status');
   if (!el) return;
@@ -1004,13 +1093,13 @@ function getMessagePreview(blocks, maxLen = 200) {
     if (b.type === 'paragraph' || b.type === 'heading') {
       texts.push(b.text);
     } else if (b.type === 'list' && b.items.length) {
-      texts.push('• ' + b.items[0]);
+      texts.push('\u2022 ' + b.items[0]);
     } else if (b.type === 'code') {
       texts.push('`code`');
     }
     const joined = texts.join(' ');
     if (joined.length > maxLen) {
-      return joined.slice(0, maxLen) + '…';
+      return joined.slice(0, maxLen) + '\u2026';
     }
   }
   return texts.join(' ').trim() || '(empty)';
@@ -1052,7 +1141,7 @@ function renderSummary(pairs) {
       </div>
       <div class="ts-pair-a">
         <span class="ts-pair-label">A${i + 1}</span>
-        <span class="ts-pair-text">${escapeHtml(p.answer || '…')}</span>
+        <span class="ts-pair-text">${escapeHtml(p.answer || '\u2026')}</span>
       </div>
     </div>
   `).join('');
@@ -1069,7 +1158,7 @@ function refreshSummary() {
 }
 
 async function doExport(format) {
-  setStatus('Reading conversation…', 'pending');
+  setStatus('Reading conversation\u2026', 'pending');
 
   try {
     const conv = extractConversation();
@@ -1105,7 +1194,7 @@ async function doExport(format) {
         }
       };
       setTimeout(tryPrint, 500);
-      setStatus(`Opened ${conv.messages.length} messages in print view — choose "Save as PDF"`, 'success');
+      setStatus(`Opened ${conv.messages.length} messages in print view \u2014 choose "Save as PDF"`, 'success');
       return;
     } else {
       setStatus('Unknown format.', 'error');
@@ -1114,7 +1203,7 @@ async function doExport(format) {
 
     const filename = `${slugify(conv.title)}-transcript.${ext}`;
     downloadFile(filename, content, mime);
-    setStatus(`Saved ${conv.messages.length} messages → ${filename}`, 'success');
+    setStatus(`Saved ${conv.messages.length} messages \u2192 ${filename}`, 'success');
   } catch (e) {
     setStatus(`Export failed: ${e.message}`, 'error');
   }

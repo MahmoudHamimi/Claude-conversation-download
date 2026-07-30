@@ -1,13 +1,13 @@
-# Transcript — Export for Claude (Sidebar Edition v1.2)
+# Transcript — Export for Claude (v1.3)
 
 A Chrome extension that exports your current Claude.ai conversation as a
 nicely formatted file: styled HTML, clean Markdown, structured JSON, or
 print-ready PDF.
 
-**What's new in v1.2:**
-- **Claude-themed UI** — Clean orange-accented design that matches Claude.ai's aesthetic (warm whites, near-black text, coral orange highlights).
-- **Dark Mode** — Toggle between light and dark themes in the sidebar. Your preference is saved.
-- **Fresh Icon** — A modern document icon with an orange accent bar.
+**What's new in v1.3:**
+- **Claude-inspired theme** — Warm coral-orange accent (`#D97757`) on clean white/black surfaces that mirror Claude.ai's own aesthetic.
+- **Dark Mode toggle** — Switch between light and dark themes in the sidebar. Your preference is saved to localStorage.
+- **Fresh icons** — Modern document icon with an orange accent bar, generated at all required resolutions.
 - **Sidebar UI** — Sleek panel slides in from the right side of Claude.ai itself.
 - **Conversation Summary** — Every Q&A pair at a glance, numbered for easy reference.
 - **PDF Export** — Opens a styled print view so you can save as PDF straight from your browser.
@@ -55,8 +55,9 @@ and look at the class names or `data-testid` attributes on the container.
 - Artifacts (code/React/HTML artifacts Claude generates) are captured as a
   labeled callout with their title rather than their full rendered content,
   since they render in a separate panel outside the normal message flow.
-- The exported HTML file also respects your system's dark-mode preference via
+- The exported HTML file respects your system's dark-mode preference via
   `prefers-color-scheme: dark`.
 - The sidebar summary shows truncated previews (~160 chars for questions,
   ~260 for answers). Click the refresh button (↻) to update when you
   navigate to a different conversation.
+- Theme preference is stored in `localStorage` under the key `transcript-theme`.

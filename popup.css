@@ -1,13 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-  --paper: #efebde;
-  --paper-inset: #e6e1d0;
-  --ink: #2b2820;
-  --ink-soft: #6b6656;
-  --rule: #c9c2ae;
-  --user: #35586b;
-  --claude: #4c6b4f;
-  --accent: #b3811f;
+  --paper: #faf8f5;
+  --paper-inset: #f3f0eb;
+  --ink: #1a1a1a;
+  --ink-soft: #6b6560;
+  --rule: #e2ddd6;
+  --user: #2d5a6b;
+  --claude: #3d6b42;
+  --accent: #d97757;
   --error: #a13d3d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1a1a1a;
+    --paper-inset: #242422;
+    --ink: #f0ece4;
+    --ink-soft: #a8a29e;
+    --rule: #33302c;
+    --user: #5a9db0;
+    --claude: #6bb36f;
+    --accent: #e88b6a;
+    --error: #e07070;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -73,6 +89,7 @@ h1 {
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+  color: var(--ink);
   transition: transform 0.08s ease, border-color 0.15s ease;
 }
 
