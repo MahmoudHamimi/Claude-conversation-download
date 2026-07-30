@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Transcript</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup">
+    <header>
+      <div class="eyebrow">Claude.ai companion</div>
+      <h1>Transcript</h1>
+      <p class="subtitle">Export this conversation, formatted to actually read well.</p>
+    </header>
+
+    <div class="rule"></div>
+
+    <div class="formats">
+      <button class="format-btn" data-format="html">
+        <span class="rail rail-html"></span>
+        <span class="format-copy">
+          <span class="format-name">Styled HTML</span>
+          <span class="format-desc">Manuscript layout, ready to print or share</span>
+        </span>
+      </button>
+      <button class="format-btn" data-format="markdown">
+        <span class="rail rail-md"></span>
+        <span class="format-copy">
+          <span class="format-name">Markdown</span>
+          <span class="format-desc">Clean .md for notes apps &amp; repos</span>
+        </span>
+      </button>
+      <button class="format-btn" data-format="json">
+        <span class="rail rail-json"></span>
+        <span class="format-copy">
+          <span class="format-name">JSON</span>
+          <span class="format-desc">Structured data for your own tooling</span>
+        </span>
+      </button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <footer>Runs entirely in your browser — nothing leaves the page.</footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

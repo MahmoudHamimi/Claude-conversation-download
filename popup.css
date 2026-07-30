@@ -1,0 +1,131 @@
+:root {
+  --paper: #efebde;
+  --paper-inset: #e6e1d0;
+  --ink: #2b2820;
+  --ink-soft: #6b6656;
+  --rule: #c9c2ae;
+  --user: #35586b;
+  --claude: #4c6b4f;
+  --accent: #b3811f;
+  --error: #a13d3d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  width: 340px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+}
+
+.popup {
+  padding: 22px 22px 18px;
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 26px;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.rule {
+  height: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 2px solid var(--rule);
+  margin: 16px 0 16px;
+}
+
+.formats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.format-btn {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--paper-inset);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: transform 0.08s ease, border-color 0.15s ease;
+}
+
+.format-btn:hover {
+  border-color: var(--accent);
+  transform: translateX(2px);
+}
+
+.format-btn:active {
+  transform: translateX(0);
+}
+
+.rail {
+  flex: 0 0 3px;
+  border-radius: 2px;
+}
+
+.rail-html { background: var(--claude); }
+.rail-md { background: var(--user); }
+.rail-json { background: var(--accent); }
+
+.format-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.format-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.format-desc {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.status {
+  min-height: 16px;
+  margin-top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.status.pending { color: var(--ink-soft); }
+.status.success { color: var(--claude); }
+.status.error { color: var(--error); }
+
+footer {
+  margin-top: 12px;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  text-align: center;
+}
