@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Transcript — Export for Claude",
-  "version": "1.2.0",
-  "description": "Export your Claude.ai conversations as Markdown, HTML, JSON, or PDF — with a handy sidebar and dark mode.",
+  "version": "1.1.0",
+  "description": "Export your Claude.ai conversations as Markdown, HTML, JSON, or PDF — with a handy sidebar.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
