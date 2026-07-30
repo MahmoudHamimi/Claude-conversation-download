@@ -1,13 +1,16 @@
-# Transcript — Export for Claude (Sidebar Edition)
+# Transcript — Export for Claude (Sidebar Edition v1.2)
 
 A Chrome extension that exports your current Claude.ai conversation as a
-nicely formatted file: styled HTML (manuscript-style transcript), clean
-Markdown, structured JSON, or print-ready PDF. 
+nicely formatted file: styled HTML, clean Markdown, structured JSON, or
+print-ready PDF.
 
-**New in this version:**
-- **Sidebar UI** — No more popup window. A sleek sidebar slides in from the right side of Claude.ai itself, plus a floating toggle button.
-- **Conversation Summary** — See every Q&A pair at a glance. Each question is paired with its answer, numbered for easy reference.
-- **PDF Export** — Opens the styled transcript in a print view so you can save as PDF straight from your browser.
+**What's new in v1.2:**
+- **Claude-themed UI** — Clean orange-accented design that matches Claude.ai's aesthetic (warm whites, near-black text, coral orange highlights).
+- **Dark Mode** — Toggle between light and dark themes in the sidebar. Your preference is saved.
+- **Fresh Icon** — A modern document icon with an orange accent bar.
+- **Sidebar UI** — Sleek panel slides in from the right side of Claude.ai itself.
+- **Conversation Summary** — Every Q&A pair at a glance, numbered for easy reference.
+- **PDF Export** — Opens a styled print view so you can save as PDF straight from your browser.
 
 Everything runs locally in your browser — no API key, no server, no data leaving the page.
 
@@ -17,21 +20,20 @@ Everything runs locally in your browser — no API key, no server, no data leavi
    Chrome loads the extension directly from these files).
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top-right toggle).
-4. Click **Load unpacked** and select the unzipped `claude-transcript-export`
-   folder.
+4. Click **Load unpacked** and select the unzipped folder.
 5. Pin the extension (puzzle-piece icon in the toolbar → pin "Transcript").
 
 ## Use
 
 1. Open any conversation on `claude.ai`.
 2. A floating 📄 button appears in the bottom-right corner. Click it (or click the Transcript toolbar icon) to open the sidebar.
-3. The sidebar shows a **Conversation Summary** with every Q&A pair, plus **Export** buttons:
-   - **Styled HTML** — a designed, print-ready transcript with speaker rails,
-     styled code blocks, and artifact callouts. Best for sharing or archiving.
+3. Use the ☾ / ☀ button in the sidebar header to switch between **Light** and **Dark** mode.
+4. The sidebar shows a **Conversation Summary** with every Q&A pair, plus **Export** buttons:
+   - **Styled HTML** — designed, print-ready transcript with speaker rails, styled code blocks, and artifact callouts.
    - **Markdown** — clean `.md`, good for Obsidian/Notion/repos.
    - **JSON** — structured `{role, blocks, text}` data for your own tooling.
-   - **PDF** — opens the styled HTML in a new tab and triggers the print dialog. Choose "Save as PDF" as the destination.
-4. Files download straight to your Downloads folder (HTML/Markdown/JSON) or open in a print tab (PDF).
+   - **PDF** — opens the styled HTML in a new tab and triggers the print dialog. Choose "Save as PDF".
+5. Files download straight to your Downloads folder (HTML/Markdown/JSON) or open in a print tab (PDF).
 
 ## How it works
 
@@ -53,8 +55,8 @@ and look at the class names or `data-testid` attributes on the container.
 - Artifacts (code/React/HTML artifacts Claude generates) are captured as a
   labeled callout with their title rather than their full rendered content,
   since they render in a separate panel outside the normal message flow.
-- Very long conversations export fine, but the styled HTML file embeds
-  Google Fonts via a CDN link, so an internet connection is needed to see
-  the intended fonts when opening the exported file (it still degrades
-  gracefully to system fonts offline).
-- The sidebar summary shows truncated previews (first ~160 chars of the question, ~260 of the answer). Click the refresh button (↻) to update if you navigate to a different conversation.
+- The exported HTML file also respects your system's dark-mode preference via
+  `prefers-color-scheme: dark`.
+- The sidebar summary shows truncated previews (~160 chars for questions,
+  ~260 for answers). Click the refresh button (↻) to update when you
+  navigate to a different conversation.
