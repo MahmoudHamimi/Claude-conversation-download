@@ -4,7 +4,7 @@ A Chrome extension that exports your current Claude.ai conversation as a
 nicely formatted file: styled HTML, clean Markdown, structured JSON, or
 print-ready PDF.
 
-**What's new in v1.3:**
+**What's new in v1.4:**
 - **Claude-inspired theme** — Warm coral-orange accent (`#D97757`) on clean white/black surfaces that mirror Claude.ai's own aesthetic.
 - **Dark Mode toggle** — Switch between light and dark themes in the sidebar. Your preference is saved to localStorage.
 - **Fresh icons** — Modern document icon with an orange accent bar, generated at all required resolutions.
